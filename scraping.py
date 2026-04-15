@@ -2,13 +2,6 @@ import requests
 from datetime import datetime
 import time
 import pandas as pd
-import numpy as np
-import boto3
-import os
-from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import NearestNeighbors
-from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
 
 
 def get_team_info(team_id, url, retries=5, backoff=4):

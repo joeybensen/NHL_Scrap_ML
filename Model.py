@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import KMeans
-
 import matplotlib.pyplot as plt
 
 DATA_PATHS = {
