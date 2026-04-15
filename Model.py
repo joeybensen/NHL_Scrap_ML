@@ -52,7 +52,7 @@ def build_knn(X, n_neighbors=6):
 
 def get_similar_players(knn, X, idx):
     distances, indices = knn.kneighbors([X[idx]])
-    return indices[0], distances[0]
+    return indices[0][1:], distances[0][1:]
 
 def run_kmeans(X, k):
     model = KMeans(n_clusters=k, random_state=42, n_init=10)
@@ -60,7 +60,7 @@ def run_kmeans(X, k):
     return model, labels
 
 
-def elbow_method(X, max_k=6):
+def elbow_method(X, max_k=4):
     inertias = []
 
     for k in range(1, max_k):
@@ -77,25 +77,15 @@ def elbow_method(X, max_k=6):
     return inertias
 
 
-CLUSTER_LABELS_3 = {
-    0: "Top-line scorer",
-    1: "Secondary / Two-way",
-    2: "Depth / Grinder"
-}
-
-CLUSTER_LABELS_5 = {
-    0: "Top-line scorer",
-    1: "Depth / Middle-six",
-    2: "Second-line scorer",
-    3: "Bottom-six / depth",
-    4: "Third-line / secondary scoring"
-}
-
-
 def assign_labels(df, labels, label_map, col_name="cluster"):
     df[col_name] = labels
     df["cluster_label"] = df[col_name].map(label_map)
     return df
+
+CLUSTER_LABELS_3 = [
+    "Top-line scorer", 
+    "Secondary / Two-way", 
+    "Depth / Grinder"]
 
 def main():
 
@@ -108,13 +98,18 @@ def main():
     # --- KNN ---
     knn = build_knn(X_weighted)
 
-    target_idx = 326 
+    target_idx = 326
+
+    print(f'target player: {forwards_df.iloc[target_idx,1]} {forwards_df.iloc[target_idx,2]}')
+
     neighbors, distances = get_similar_players(knn, X_weighted, target_idx)
 
     pids = forwards_df.iloc[neighbors]["playerId"].values
 
-    print("Similar players:", neighbors)
-    print("Distances:", distances)
+
+    print("Similar player - Distance:")
+    for i, neighbor_idx in enumerate(neighbors):
+        print(f'{forwards_df.iloc[neighbor_idx,1]} {forwards_df.iloc[neighbor_idx,2]} - {round(distances[i],3)}')
 
     print(personal_df[personal_df["playerId"].isin(pids)])
     print(current_df[current_df["playerId"].isin(pids)])
@@ -123,19 +118,22 @@ def main():
     k = 3
     model, labels = run_kmeans(X_weighted, k)
 
-    forwards_df = assign_labels(
-        forwards_df,
-        labels,
-        CLUSTER_LABELS_3
-    )
+    centroid_df = pd.DataFrame(model.cluster_centers_, columns=NUMERIC_FEATURES)
+    sorted_clusters = centroid_df["points_per_60"].sort_values(ascending=False).index
+    label_map = dict(zip(sorted_clusters, CLUSTER_LABELS_3))
 
-    forwards_df["cluster"] = labels
+    forwards_df = assign_labels(forwards_df, labels, label_map)
 
     # --- SAVE ---
     forwards_df.to_csv("files/forwards_data.csv", index=False)
 
     # --- OPTIONAL EVALUATION ---
     elbow_method(X_weighted, max_k=6)
+
+    centroid_df = pd.DataFrame(model.cluster_centers_, columns=NUMERIC_FEATURES)
+    sorted_clusters = centroid_df["points_per_60"].sort_values(ascending=False).index
+
+    print(centroid_df)
 
 
 if __name__ == "__main__":
